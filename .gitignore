@@ -1,0 +1,13 @@
+# Runtime data
+data/
+
+# Virtual environment
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
