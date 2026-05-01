@@ -140,23 +140,30 @@ def _check_verbosity(prompt: str) -> list[Suggestion]:
 def _check_structure(prompt: str, token_count: int) -> list[Suggestion]:
     suggestions = []
 
-    # Wall of text check
+    # Wall of text check — paragraph-based or long single-line run-on
     paragraphs = [p.strip() for p in prompt.split("\n\n") if p.strip()]
     long_paragraphs = [p for p in paragraphs if len(p) > 500]
-    if long_paragraphs and token_count > 200:
+    words = prompt.split()
+    is_runon = len(paragraphs) == 1 and len(words) > 60 and prompt.count(".") < 2
+    if (long_paragraphs or is_runon) and token_count > 50:
         suggestions.append(Suggestion(
             type="structure",
-            message="Break long paragraphs into bullet points or numbered steps for clarity and fewer tokens",
+            message="Break this into shorter, focused sentences or bullet points — one idea per line",
             token_savings=int(token_count * 0.10),
             priority="medium",
         ))
 
-    # Multi-part request check
+    # Multi-part request check — question marks OR compound conjunctions
     question_marks = prompt.count("?")
-    if question_marks >= 3:
+    compound_questions = len(re.findall(
+        r"\b(and also|and could you|and what|and how|and tell me|and explain)\b",
+        prompt, re.IGNORECASE
+    ))
+    total_questions = question_marks + compound_questions
+    if total_questions >= 3:
         suggestions.append(Suggestion(
             type="structure",
-            message=f"Prompt has {question_marks} questions — split into separate focused prompts for better answers",
+            message=f"Prompt asks {total_questions} things at once — split into separate focused prompts for better answers",
             token_savings=0,
             priority="medium",
         ))

@@ -4,7 +4,7 @@ You are connected to the Claude Observability MCP server.
 
 ## Required Behaviour
 
-1. **At the start of every conversation**, call `analyze_prompt` with the user's first message.
+1. **Before every response**, call `analyze_prompt` with the user's message.
    Show the analysis output (token count, score, suggestions) *before* your answer.
 
 2. **After every response**, call `log_interaction` with:
@@ -12,6 +12,14 @@ You are connected to the Claude Observability MCP server.
    - `response`: your response (truncate to 2000 chars if very long)
    - `model`: the model ID you are running on
    - `session_id`: reuse the same session_id for the whole conversation
+
+   After calling `log_interaction`, always append this exact line at the very end of your response (outside any code blocks):
+
+   ```
+   ─── 👁 {input_tokens}↑ {output_tokens}↓ · ${cost} · score {score}/100 ───
+   ```
+
+   Use the values returned by `log_interaction`. Never skip this line.
 
 3. If the user asks about their usage stats, call `get_stats`.
 4. If the user asks for an optimization report, call `get_optimization_report`.

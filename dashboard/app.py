@@ -61,6 +61,31 @@ def api_expensive():
     return jsonify(rows)
 
 
+@app.route("/widget")
+def widget():
+    return render_template("widget.html")
+
+
+@app.route("/api/widget")
+def api_widget():
+    recent = db.get_recent_interactions(limit=1)
+    today = db.get_daily_stats(days=1)
+    summary = db.get_summary_stats()
+    last = recent[0] if recent else {}
+    today_row = today[0] if today else {}
+    return jsonify({
+        "last_input": last.get("input_tokens", 0),
+        "last_output": last.get("output_tokens", 0),
+        "last_cost": last.get("cost", 0.0),
+        "last_score": last.get("optimization_score", 100),
+        "last_id": last.get("id"),
+        "today_tokens": today_row.get("input_tokens", 0) + today_row.get("output_tokens", 0),
+        "today_cost": today_row.get("cost", 0.0),
+        "total_tokens": summary["total_input_tokens"] + summary["total_output_tokens"],
+        "total_cost": summary["total_cost"],
+    })
+
+
 @app.route("/api/analyze", methods=["POST"])
 def api_analyze():
     """Analyze a prompt and return suggestions (used by the dashboard prompt tester)."""

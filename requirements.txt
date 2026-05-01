@@ -4,3 +4,5 @@ flask>=3.0.0
 tiktoken>=0.7.0
 rich>=13.7.0
 click>=8.1.7
+rumps>=0.4.0
+setproctitle>=1.3.0

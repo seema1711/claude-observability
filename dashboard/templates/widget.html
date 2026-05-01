@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Claude Observability</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", monospace;
+    background: #1a1a1a;
+    color: #e0e0e0;
+    font-size: 12px;
+    padding: 10px;
+    min-width: 220px;
+    user-select: none;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border-bottom: 1px solid #2a2a2a;
+  }
+  .row:last-child { border-bottom: none; }
+  .label { color: #888; font-size: 11px; }
+  .value { font-weight: 600; color: #e0e0e0; }
+  .value.green { color: #4ade80; }
+  .value.yellow { color: #facc15; }
+  .value.blue { color: #60a5fa; }
+  .score-bar {
+    width: 100%;
+    height: 3px;
+    background: #2a2a2a;
+    border-radius: 2px;
+    margin-top: 6px;
+  }
+  .score-fill {
+    height: 3px;
+    border-radius: 2px;
+    background: #4ade80;
+    transition: width 0.4s ease;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .title { font-size: 11px; color: #666; letter-spacing: 0.05em; text-transform: uppercase; }
+  .section { margin-bottom: 8px; }
+  .section-label { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="dot" id="dot"></div>
+  <span class="title">Claude Observability</span>
+</div>
+
+<div class="section">
+  <div class="section-label">Last Interaction</div>
+  <div class="row">
+    <span class="label">Tokens</span>
+    <span class="value blue" id="last-tokens">—</span>
+  </div>
+  <div class="row">
+    <span class="label">In / Out</span>
+    <span class="value" id="last-io">—</span>
+  </div>
+  <div class="row">
+    <span class="label">Cost</span>
+    <span class="value green" id="last-cost">—</span>
+  </div>
+  <div class="row">
+    <span class="label">Score</span>
+    <span class="value" id="last-score">—</span>
+  </div>
+  <div class="score-bar"><div class="score-fill" id="score-fill" style="width:0%"></div></div>
+</div>
+
+<div class="section">
+  <div class="section-label">Today</div>
+  <div class="row">
+    <span class="label">Tokens</span>
+    <span class="value" id="today-tokens">—</span>
+  </div>
+  <div class="row">
+    <span class="label">Cost</span>
+    <span class="value yellow" id="today-cost">—</span>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">All Time</div>
+  <div class="row">
+    <span class="label">Tokens</span>
+    <span class="value" id="total-tokens">—</span>
+  </div>
+  <div class="row">
+    <span class="label">Cost</span>
+    <span class="value yellow" id="total-cost">—</span>
+  </div>
+</div>
+
+<script>
+  const fmt = n => n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n);
+  const fmtCost = c => '$' + (c || 0).toFixed(4);
+  let lastId = null;
+
+  async function refresh() {
+    try {
+      const r = await fetch('/api/widget');
+      const d = await r.json();
+
+      if (d.last_id !== lastId) {
+        lastId = d.last_id;
+        document.getElementById('dot').style.background = '#facc15';
+        setTimeout(() => document.getElementById('dot').style.background = '#4ade80', 800);
+      }
+
+      document.getElementById('last-tokens').textContent = fmt(d.last_input + d.last_output);
+      document.getElementById('last-io').textContent = `${fmt(d.last_input)}↑  ${fmt(d.last_output)}↓`;
+      document.getElementById('last-cost').textContent = fmtCost(d.last_cost);
+      document.getElementById('last-score').textContent = `${d.last_score}/100`;
+      document.getElementById('score-fill').style.width = `${d.last_score}%`;
+      document.getElementById('score-fill').style.background =
+        d.last_score >= 80 ? '#4ade80' : d.last_score >= 60 ? '#facc15' : '#f87171';
+
+      document.getElementById('today-tokens').textContent = fmt(d.today_tokens);
+      document.getElementById('today-cost').textContent = fmtCost(d.today_cost);
+      document.getElementById('total-tokens').textContent = fmt(d.total_tokens);
+      document.getElementById('total-cost').textContent = fmtCost(d.total_cost);
+    } catch(e) {
+      document.getElementById('dot').style.background = '#f87171';
+    }
+  }
+
+  refresh();
+  setInterval(refresh, 3000);
+</script>
+</body>
+</html>
