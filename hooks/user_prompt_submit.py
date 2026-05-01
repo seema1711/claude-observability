@@ -30,10 +30,8 @@ from pathlib import Path
 OBS_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(OBS_DIR))
 
-import db
-import analyzer
-import tracker
-from config import DASHBOARD_PORT
+from core import db, analyzer, tracker
+from core.config import DASHBOARD_PORT
 
 db.init_db()
 

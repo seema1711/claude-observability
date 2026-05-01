@@ -8,8 +8,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 import rumps
-import db
-from config import DASHBOARD_PORT
+from core import db
+from core.config import DASHBOARD_PORT
 
 # Set process name so it shows as "Claude Observability" in Activity Monitor / Spotlight
 try:

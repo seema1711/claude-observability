@@ -7,10 +7,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import db
-import tracker
-import analyzer
-from config import DASHBOARD_PORT
+from core import db, tracker, analyzer
+from core.config import DASHBOARD_PORT
 
 from flask import Flask, jsonify, render_template, request
 

@@ -5,8 +5,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Literal
 
-from config import VERBOSITY_PATTERNS
-from tracker import estimate_tokens
+from core.config import VERBOSITY_PATTERNS
+from core.tracker import estimate_tokens
 
 Category = Literal["code", "debugging", "explanation", "writing",
                    "analysis", "question", "creative", "refactoring", "other"]

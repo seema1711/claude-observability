@@ -2,7 +2,7 @@ import sqlite3
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from config import DB_PATH
+from core.config import DB_PATH
 
 
 def get_conn() -> sqlite3.Connection:

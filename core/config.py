@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-BASE_DIR = Path(__file__).parent
+BASE_DIR = Path(__file__).parent.parent  # project root
 DATA_DIR = BASE_DIR / "data"
 DB_PATH = DATA_DIR / "observability.db"
 

@@ -25,13 +25,11 @@ import sys
 import uuid
 from pathlib import Path
 
-# Ensure local modules are importable
+# Ensure project root is on path for `core` package
 sys.path.insert(0, str(Path(__file__).parent))
 
-import db
-import analyzer
-import tracker
-from config import MODEL_PRICING
+from core import db, analyzer, tracker
+from core.config import MODEL_PRICING
 
 db.init_db()
 

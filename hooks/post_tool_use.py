@@ -16,8 +16,7 @@ from pathlib import Path
 OBS_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(OBS_DIR))
 
-import db
-import tracker
+from core import db, tracker
 db.init_db()
 
 

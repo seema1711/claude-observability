@@ -1,7 +1,7 @@
 """Token counting and cost calculation utilities."""
 from __future__ import annotations
 
-from config import MODEL_PRICING
+from core.config import MODEL_PRICING
 
 
 def estimate_tokens(text: str) -> int:
@@ -20,7 +20,7 @@ def count_tokens_api(text: str, model: str = "claude-sonnet-4-6") -> int:
     """Use Anthropic API for exact token count (requires ANTHROPIC_API_KEY)."""
     try:
         import anthropic
-        from config import ANTHROPIC_API_KEY
+        from core.config import ANTHROPIC_API_KEY
         if not ANTHROPIC_API_KEY:
             return estimate_tokens(text)
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
