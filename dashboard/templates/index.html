@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Observability Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --accent: #7c5af3;
+    --green: #3fb950; --yellow: #d29922; --red: #f85149;
+    --blue: #58a6ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 18px; font-weight: 600; }
+  header span { font-size: 12px; color: var(--muted); margin-left: auto; }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(63,185,80,0.4); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(63,185,80,0.4)} 50%{box-shadow:0 0 0 6px rgba(63,185,80,0)} }
+  main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .card h2 { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .card .value { font-size: 28px; font-weight: 700; }
+  .card .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .card-chart { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .card-chart h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+  canvas { max-height: 220px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
+  td { padding: 8px 12px; border-bottom: 1px solid #21262d; vertical-align: top; }
+  tr:hover td { background: #1c2128; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+  .badge-code { background: #1f6feb33; color: var(--blue); }
+  .badge-debug { background: #da363333; color: var(--red); }
+  .badge-explain { background: #3fb95033; color: var(--green); }
+  .badge-write { background: #d2992233; color: var(--yellow); }
+  .badge-analysis { background: #7c5af333; color: #b392f0; }
+  .badge-other { background: #30363d; color: var(--muted); }
+  .score { font-weight: 700; }
+  .score-high { color: var(--green); }
+  .score-mid { color: var(--yellow); }
+  .score-low { color: var(--red); }
+  /* Prompt Tester */
+  .tester { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+  .tester h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .tester textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 12px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 100px; }
+  .tester textarea:focus { outline: none; border-color: var(--accent); }
+  .tester-meta { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+  .tester-meta button { background: var(--accent); color: #fff; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; }
+  .tester-meta button:hover { opacity: 0.85; }
+  .tester-meta .tok-counter { color: var(--muted); font-size: 12px; }
+  .suggestions-box { margin-top: 14px; display: none; }
+  .suggestions-box .s-header { display: flex; gap: 16px; margin-bottom: 10px; font-size: 13px; }
+  .s-kv { display: flex; flex-direction: column; }
+  .s-kv .label { font-size: 11px; color: var(--muted); }
+  .s-kv .val { font-weight: 600; }
+  .suggestion-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .suggestion-item:last-child { border-bottom: none; }
+  .priority-high { color: var(--red); }
+  .priority-medium { color: var(--yellow); }
+  .priority-low { color: var(--green); }
+  .s-type { font-size: 10px; background: var(--border); color: var(--muted); border-radius: 4px; padding: 1px 6px; white-space: nowrap; align-self: center; }
+  .s-msg { flex: 1; font-size: 13px; }
+  .s-save { font-size: 11px; color: var(--muted); white-space: nowrap; align-self: center; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="pulse"></div>
+  <h1>Claude Observability</h1>
+  <span id="last-updated"></span>
+</header>
+
+<main>
+
+  <!-- Stat cards -->
+  <div class="grid-4">
+    <div class="card">
+      <h2>Total Interactions</h2>
+      <div class="value" id="stat-interactions">—</div>
+      <div class="sub">all time</div>
+    </div>
+    <div class="card">
+      <h2>Total Tokens</h2>
+      <div class="value" id="stat-tokens">—</div>
+      <div class="sub" id="stat-tokens-sub">in + out</div>
+    </div>
+    <div class="card">
+      <h2>Total Cost (est.)</h2>
+      <div class="value" id="stat-cost">—</div>
+      <div class="sub">USD</div>
+    </div>
+    <div class="card">
+      <h2>Avg Opt. Score</h2>
+      <div class="value" id="stat-score">—</div>
+      <div class="sub">out of 100</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="grid-3">
+    <div class="card-chart">
+      <h3>Token Usage — Last 30 Days</h3>
+      <canvas id="chart-daily"></canvas>
+    </div>
+    <div class="card-chart">
+      <h3>Prompt Categories</h3>
+      <canvas id="chart-categories"></canvas>
+    </div>
+  </div>
+
+  <!-- Prompt Tester -->
+  <div class="tester">
+    <h3>⚡ Live Prompt Analyzer — paste any prompt to get optimization suggestions instantly</h3>
+    <textarea id="prompt-input" placeholder="Paste your prompt here..." oninput="onPromptInput()"></textarea>
+    <div class="tester-meta">
+      <button onclick="analyzePrompt()">Analyze</button>
+      <span class="tok-counter">Tokens: <strong id="tok-count">0</strong></span>
+      <span class="tok-counter" style="margin-left:auto;">Opt. score will appear after analysis</span>
+    </div>
+    <div class="suggestions-box" id="suggestions-box">
+      <div class="s-header">
+        <div class="s-kv"><span class="label">CATEGORY</span><span class="val" id="r-category">—</span></div>
+        <div class="s-kv"><span class="label">TOKENS</span><span class="val" id="r-tokens">—</span></div>
+        <div class="s-kv"><span class="label">SCORE</span><span class="val" id="r-score">—</span></div>
+        <div class="s-kv"><span class="label">POTENTIAL SAVINGS</span><span class="val" id="r-savings">—</span></div>
+      </div>
+      <div id="suggestion-list"></div>
+    </div>
+  </div>
+
+  <!-- Tables -->
+  <div class="grid-2">
+    <div class="card-chart">
+      <h3>Recent Interactions</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Prompt</th><th>Category</th><th>Tokens</th><th>Cost</th><th>Score</th></tr></thead>
+          <tbody id="table-recent"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-chart">
+      <h3>Most Expensive Prompts</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Prompt</th><th>Tokens</th><th>Cost</th></tr></thead>
+          <tbody id="table-expensive"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const fmt = {
+  tokens: n => n >= 1e6 ? (n/1e6).toFixed(2)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'k' : n,
+  cost:   n => n < 0.001 ? '$'+(n*1000).toFixed(4)+'m' : '$'+n.toFixed(4),
+  score:  n => { const cls = n>=85?'score-high':n>=65?'score-mid':'score-low'; return `<span class="score ${cls}">${n}</span>`; },
+  badge:  c => `<span class="badge badge-${c||'other'}">${c||'other'}</span>`,
+};
+
+let debounceTimer;
+
+function onPromptInput() {
+  clearTimeout(debounceTimer);
+  const prompt = document.getElementById('prompt-input').value;
+  // quick local estimate: ~4 chars per token
+  const est = Math.max(0, Math.round(prompt.length / 4));
+  document.getElementById('tok-count').textContent = est;
+  debounceTimer = setTimeout(analyzePrompt, 800);
+}
+
+async function analyzePrompt() {
+  const prompt = document.getElementById('prompt-input').value.trim();
+  if (!prompt) return;
+  const res = await fetch('/api/analyze', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({prompt})
+  });
+  const d = await res.json();
+  document.getElementById('suggestions-box').style.display = 'block';
+  document.getElementById('r-category').textContent = d.category;
+  document.getElementById('r-tokens').textContent = '~'+d.token_count;
+  document.getElementById('r-score').innerHTML = fmt.score(d.optimization_score);
+  document.getElementById('r-savings').textContent = d.total_potential_savings > 0
+    ? '~'+d.total_potential_savings+' tokens' : 'none';
+  document.getElementById('tok-count').textContent = d.token_count;
+
+  const list = document.getElementById('suggestion-list');
+  if (!d.suggestions.length) {
+    list.innerHTML = '<p style="color:var(--green);padding:8px 0;">✅ Prompt is already well-optimized!</p>';
+    return;
+  }
+  const sorted = [...d.suggestions].sort((a,b) => b.token_savings - a.token_savings);
+  list.innerHTML = sorted.map(s => `
+    <div class="suggestion-item">
+      <span class="priority-${s.priority}">●</span>
+      <span class="s-type">${s.type}</span>
+      <span class="s-msg">${s.message}</span>
+      ${s.token_savings ? `<span class="s-save">-${s.token_savings} tok</span>` : ''}
+    </div>`).join('');
+}
+
+async function loadSummary() {
+  const d = await fetch('/api/summary').then(r=>r.json());
+  document.getElementById('stat-interactions').textContent = d.total_interactions;
+  const tot = d.total_input_tokens + d.total_output_tokens;
+  document.getElementById('stat-tokens').textContent = fmt.tokens(tot);
+  document.getElementById('stat-tokens-sub').textContent =
+    fmt.tokens(d.total_input_tokens)+' in / '+fmt.tokens(d.total_output_tokens)+' out';
+  document.getElementById('stat-cost').textContent = fmt.cost(d.total_cost);
+  document.getElementById('stat-score').innerHTML = fmt.score(Math.round(d.avg_optimization_score));
+  document.getElementById('last-updated').textContent =
+    'Updated ' + new Date().toLocaleTimeString();
+
+  // Category chart
+  if (d.categories && d.categories.length) {
+    const catLabels = d.categories.map(c=>c.category);
+    const catData   = d.categories.map(c=>c.cnt);
+    renderPie('chart-categories', catLabels, catData);
+  }
+}
+
+async function loadDaily() {
+  const rows = await fetch('/api/daily?days=30').then(r=>r.json());
+  const labels = rows.map(r=>r.date.slice(5));
+  const inp    = rows.map(r=>r.input_tokens);
+  const out    = rows.map(r=>r.output_tokens);
+  renderStackedBar('chart-daily', labels, inp, out);
+}
+
+async function loadRecent() {
+  const rows = await fetch('/api/interactions?limit=15').then(r=>r.json());
+  document.getElementById('table-recent').innerHTML = rows.map(r=>`
+    <tr>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.prompt_preview}</td>
+      <td>${fmt.badge(r.category)}</td>
+      <td>${fmt.tokens(r.input_tokens+r.output_tokens)}</td>
+      <td>${fmt.cost(r.cost)}</td>
+      <td>${fmt.score(r.optimization_score)}</td>
+    </tr>`).join('') || '<tr><td colspan="5" style="color:var(--muted);text-align:center">No data yet</td></tr>';
+}
+
+async function loadExpensive() {
+  const rows = await fetch('/api/expensive?limit=10').then(r=>r.json());
+  document.getElementById('table-expensive').innerHTML = rows.map(r=>`
+    <tr>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.prompt_preview}</td>
+      <td>${fmt.tokens(r.input_tokens+r.output_tokens)}</td>
+      <td>${fmt.cost(r.cost)}</td>
+    </tr>`).join('') || '<tr><td colspan="3" style="color:var(--muted);text-align:center">No data yet</td></tr>';
+}
+
+const COLORS = ['#7c5af3','#58a6ff','#3fb950','#d29922','#f85149','#79c0ff','#56d364','#e3b341'];
+
+let charts = {};
+function renderStackedBar(id, labels, inp, out) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {label:'Input tokens', data:inp, backgroundColor:'#7c5af399', stack:'s'},
+        {label:'Output tokens', data:out, backgroundColor:'#58a6ff99', stack:'s'},
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8b949e',font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:'#8b949e',font:{size:10}},grid:{color:'#21262d'}},
+        y:{ticks:{color:'#8b949e',font:{size:10}},grid:{color:'#21262d'},
+           beginAtZero:true,
+           ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v}},
+      }
+    }
+  });
+}
+
+function renderPie(id, labels, data) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets:[{data, backgroundColor:COLORS, borderColor:'#161b22', borderWidth:2}]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'right',labels:{color:'#e6edf3',font:{size:11},padding:12}}}
+    }
+  });
+}
+
+async function refresh() {
+  await Promise.all([loadSummary(), loadDaily(), loadRecent(), loadExpensive()]);
+}
+
+refresh();
+setInterval(refresh, 30_000);
+</script>
+</body>
+</html>
