@@ -15,23 +15,28 @@ Real-time prompt analysis, token tracking, and cost monitoring for Claude — vi
 
 ```
 .
-├── mcp_server.py              # MCP server (FastMCP) — 7 tools
-├── analyzer.py                # Rule-based prompt analyzer
-├── tracker.py                 # Token counting & cost calculation
-├── db.py                      # SQLite database layer
-├── config.py                  # Model pricing & config
-├── requirements.txt
-├── setup.sh                   # One-time setup script
-├── start_dashboard.sh
-├── start_mcp.sh
-├── CLAUDE.md                  # System instructions for Claude
+├── core/
+│   ├── analyzer.py            # Rule-based prompt analyzer
+│   ├── config.py              # Model pricing & config
+│   ├── db.py                  # SQLite database layer
+│   └── tracker.py             # Token counting & cost calculation
 ├── dashboard/
 │   ├── app.py                 # Flask API
 │   └── templates/
-│       └── index.html         # Dashboard UI
-└── hooks/
-    ├── user_prompt_submit.py  # Claude Code UserPromptSubmit hook
-    └── post_tool_use.py       # Claude Code PostToolUse hook
+│       ├── index.html         # Full dashboard UI
+│       └── widget.html        # Compact live widget
+├── hooks/
+│   ├── user_prompt_submit.py  # Claude Code UserPromptSubmit hook
+│   └── post_tool_use.py       # Claude Code PostToolUse hook
+├── scripts/
+│   ├── setup.sh               # One-time setup script
+│   ├── start_dashboard.sh
+│   ├── start_mcp.sh
+│   └── start_widget.sh
+├── mcp_server.py              # MCP server (FastMCP) — 7 tools
+├── menubar_widget.py          # macOS menu bar widget
+├── CLAUDE.md                  # System instructions for Claude
+└── requirements.txt
 ```
 
 ## Quick start
@@ -45,7 +50,7 @@ pip install -r requirements.txt
 ### 2. Run setup (installs hooks + configures Claude Desktop)
 
 ```bash
-bash setup.sh
+bash scripts/setup.sh
 ```
 
 This will:
@@ -57,17 +62,15 @@ This will:
 ### 3. Start the dashboard
 
 ```bash
-bash start_dashboard.sh
-# or
-python dashboard/app.py
+bash scripts/start_dashboard.sh
 ```
 
-Open `http://localhost:7891` in your browser.
+Open `http://localhost:7891` in your browser. For a compact live widget: `http://localhost:7891/widget`
 
 ### 4. Start the MCP server (Claude Desktop)
 
 ```bash
-bash start_mcp.sh
+bash scripts/start_mcp.sh
 ```
 
 Or add it to your Claude Desktop config manually:
@@ -126,3 +129,5 @@ Environment variables:
 - `tiktoken>=0.7.0`
 - `rich>=13.7.0`
 - `click>=8.1.7`
+- `rumps>=0.4.0` (macOS menu bar widget)
+- `setproctitle>=1.3.0`
