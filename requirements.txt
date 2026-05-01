@@ -1,0 +1,6 @@
+anthropic>=0.40.0
+mcp>=1.9.0
+flask>=3.0.0
+tiktoken>=0.7.0
+rich>=13.7.0
+click>=8.1.7
